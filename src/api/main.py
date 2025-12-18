@@ -92,14 +92,14 @@ app = FastAPI(
     ## Quick Start
     
     1. Submit a task: `POST /tasks`
-    2. Check status: `GET /tasks/{task_id}`
-    3. Monitor in real-time: `WebSocket /ws/tasks/{task_id}`
+    2. Check status: `GET /api/tasks/{task_id}`
+    3. Monitor in real-time: `WebSocket /api/ws/tasks/{task_id}`
     """,
     version=__version__,
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
     responses={
         500: {"model": ErrorResponse, "description": "Internal server error"},
     },
@@ -115,15 +115,15 @@ app.add_middleware(
 )
 
 
-# Include routers
-app.include_router(tasks_router)
-app.include_router(queues_router)
-app.include_router(workers_router)
-app.include_router(ws_router)
+# Include routers with /api prefix for Vercel deployment
+app.include_router(tasks_router, prefix="/api")
+app.include_router(queues_router, prefix="/api")
+app.include_router(workers_router, prefix="/api")
+app.include_router(ws_router, prefix="/api")
 
 
 @app.get(
-    "/",
+    "/api",
     response_model=dict,
     tags=["Root"],
     summary="API root",
@@ -138,15 +138,15 @@ async def root() -> dict:
     return {
         "name": "Distributed Task Queue API",
         "version": __version__,
-        "docs": "/docs",
-        "redoc": "/redoc",
-        "openapi": "/openapi.json",
-        "health": "/health",
+        "docs": "/api/docs",
+        "redoc": "/api/redoc",
+        "openapi": "/api/openapi.json",
+        "health": "/api/health",
     }
 
 
 @app.get(
-    "/health",
+    "/api/health",
     response_model=HealthResponse,
     tags=["Health"],
     summary="Health check",
