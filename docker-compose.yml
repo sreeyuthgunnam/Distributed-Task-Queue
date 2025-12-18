@@ -1,0 +1,120 @@
+services:
+  # Redis message broker
+  redis:
+    image: redis:7-alpine
+    container_name: taskqueue-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - taskqueue-network
+
+  # FastAPI backend
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: taskqueue-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - LOG_LEVEL=INFO
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - taskqueue-network
+
+  # Worker instances
+  worker-1:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    container_name: taskqueue-worker-1
+    restart: unless-stopped
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - WORKER_ID=worker-1
+      - WORKER_QUEUES=default,emails
+      - LOG_LEVEL=INFO
+    command: ["python", "-m", "src.worker.main", "--worker-id", "worker-1", "--queues", "default,emails"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - taskqueue-network
+
+  worker-2:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    container_name: taskqueue-worker-2
+    restart: unless-stopped
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - WORKER_ID=worker-2
+      - WORKER_QUEUES=default,images
+      - LOG_LEVEL=INFO
+    command: ["python", "-m", "src.worker.main", "--worker-id", "worker-2", "--queues", "default,images"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - taskqueue-network
+
+  worker-3:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    container_name: taskqueue-worker-3
+    restart: unless-stopped
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - WORKER_ID=worker-3
+      - WORKER_QUEUES=default,data
+      - LOG_LEVEL=INFO
+    command: ["python", "-m", "src.worker.main", "--worker-id", "worker-3", "--queues", "default,data"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - taskqueue-network
+
+  # Frontend (Nginx serving React)
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: taskqueue-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+    networks:
+      - taskqueue-network
+
+networks:
+  taskqueue-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
