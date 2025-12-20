@@ -25,9 +25,14 @@ async def get_broker(request: Request) -> RedisBroker:
     Raises:
         RuntimeError: If broker is not initialized.
     """
-    broker = request.app.state.broker
+    from fastapi import HTTPException, status
+    
+    broker = getattr(request.app.state, "broker", None)
     if broker is None:
-        raise RuntimeError("Redis broker not initialized")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Redis broker not initialized. Please check Redis connection."
+        )
     return broker
 
 

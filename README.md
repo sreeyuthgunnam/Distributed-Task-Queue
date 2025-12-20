@@ -149,6 +149,51 @@ make test-coverage
 pytest tests/test_api.py
 ```
 
+## Deployment
+
+### Vercel Deployment (Production)
+
+This application can be deployed to Vercel for the frontend and API. **Important**: Workers must be deployed separately as Vercel uses serverless functions.
+
+📚 **[Complete Vercel Deployment Guide](VERCEL_DEPLOYMENT.md)**
+
+Quick steps:
+1. Set up a cloud Redis instance (Upstash recommended)
+2. Configure `REDIS_URL` in Vercel environment variables
+3. Deploy to Vercel (automatic via GitHub)
+4. Run workers on a separate server (VPS, Docker, etc.)
+
+See [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) for detailed instructions.
+
+### Recent Production Fixes
+
+✅ Fixed "unknown error" issues in production
+✅ Added missing dependencies for Vercel
+✅ Improved error messages for debugging
+✅ Added comprehensive deployment documentation
+
+See [PRODUCTION_FIXES.md](PRODUCTION_FIXES.md) for details on what was fixed.
+
+## Testing
+
+### Automated Tests
+```bash
+# Run all tests
+make test
+
+# Run with coverage
+make test-coverage
+
+# Run specific test file
+pytest tests/test_api.py
+```
+
+### Manual Testing
+See [TESTING_GUIDE.md](TESTING_GUIDE.md) for step-by-step testing instructions including:
+- Local testing with Docker
+- Production testing on Vercel
+- Common issues and solutions
+
 ## Project Structure
 
 ```
@@ -160,8 +205,22 @@ pytest tests/test_api.py
 ├── frontend/          # React dashboard
 ├── tests/             # Test suite
 ├── docker/            # Docker configurations
+├── docs/              # Documentation and guides
+├── VERCEL_DEPLOYMENT.md      # Vercel deployment guide
+├── PRODUCTION_FIXES.md       # Recent fixes and improvements
+├── TESTING_GUIDE.md          # Manual testing instructions
 └── docker-compose.yml # Service orchestration
 ```
+
+## Documentation
+
+- **[Vercel Deployment Guide](VERCEL_DEPLOYMENT.md)** - Deploy to production
+- **[Production Fixes](PRODUCTION_FIXES.md)** - Recent bug fixes and improvements
+- **[Testing Guide](TESTING_GUIDE.md)** - How to test locally and in production
+- **[Beginner Guide](docs/BEGINNER_GUIDE.md)** - Learn the concepts
+- **[Learning Path](docs/LEARNING_PATH.md)** - Study roadmap
+- **[Interview Prep](docs/INTERVIEW_PREP.md)** - Interview questions
+- **[Project Deep Dive](docs/PROJECT_DEEP_DIVE.md)** - Architecture details
 
 ## License
 

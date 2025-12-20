@@ -89,10 +89,22 @@ async def create_task(
             message="Task submitted successfully",
         )
 
-    except Exception as e:
-        logger.error("Failed to create task", error=str(e))
+    except ConnectionError as e:
+        logger.error("Redis connection error", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Redis connection unavailable. Please check Redis server.",
+        )
+    except ValueError as e:
+        logger.error("Invalid task data", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid task data: {str(e)}",
+        )
+    except Exception as e:
+        logger.error("Failed to create task", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to submit task: {str(e)}",
         )
 
