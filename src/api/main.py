@@ -25,13 +25,19 @@ from src.api.routers import (
 )
 from src.api.schemas import HealthResponse, ErrorResponse
 from src.config import get_settings
-from src.logging_config import configure_logging, get_logger
 from src.queue import RedisBroker
 
-
-# Configure logging
-configure_logging()
-logger = get_logger(__name__)
+# Configure logging with error handling for serverless
+try:
+    from src.logging_config import configure_logging, get_logger
+    configure_logging()
+    logger = get_logger(__name__)
+except Exception as e:
+    # Fallback to basic logging if structlog fails
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Failed to configure structlog, using basic logging: {e}")
 
 
 @asynccontextmanager
@@ -50,13 +56,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     
     # Initialize Redis broker
     broker = RedisBroker(settings)
+    app.state.broker = None
+    
+    # Try to connect to Redis, but don't fail if it's not available
+    # This allows the function to start in serverless environments
     try:
         await broker.connect()
         app.state.broker = broker
         logger.info("Connected to Redis", url=settings.redis_url)
     except Exception as e:
-        logger.error("Failed to connect to Redis", error=str(e))
-        app.state.broker = None
+        logger.warning(
+            "Failed to connect to Redis on startup - will retry on first request",
+            error=str(e),
+            redis_url=settings.redis_url
+        )
+        # Store the broker for later retry attempts
+        app.state.broker_pending = broker
     
     yield
     
@@ -161,8 +176,18 @@ async def health_check() -> HealthResponse:
     Health check endpoint.
     
     Verifies connectivity to Redis and returns overall health status.
+    Always returns 200 to verify the function itself is working.
     """
     redis_connected = False
+    
+    # Try to connect if broker is pending
+    if app.state.broker is None and hasattr(app.state, 'broker_pending'):
+        try:
+            await app.state.broker_pending.connect()
+            app.state.broker = app.state.broker_pending
+            app.state.broker_pending = None
+        except Exception:
+            pass
     
     if app.state.broker:
         try:
