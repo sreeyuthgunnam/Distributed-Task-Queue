@@ -22,7 +22,7 @@ class TestHealthEndpoint:
     @pytest.mark.asyncio
     async def test_health_check(self, async_client: AsyncClient):
         """Test health endpoint returns OK."""
-        response = await async_client.get("/health")
+        response = await async_client.get("/api/health")
         
         assert response.status_code == 200
         data = response.json()
@@ -42,7 +42,7 @@ class TestTaskEndpoints:
             "priority": 5,
         }
         
-        response = await async_client.post("/tasks", json=task_data)
+        response = await async_client.post("/api/tasks", json=task_data)
         
         assert response.status_code in [200, 201, 202]
         data = response.json()
@@ -58,7 +58,7 @@ class TestTaskEndpoints:
             "priority": 10,
         }
         
-        response = await async_client.post("/tasks", json=task_data)
+        response = await async_client.post("/api/tasks", json=task_data)
         
         assert response.status_code in [200, 201, 202]
 
@@ -70,7 +70,7 @@ class TestTaskEndpoints:
             "payload": {},
         }
         
-        response = await async_client.post("/tasks", json=task_data)
+        response = await async_client.post("/api/tasks", json=task_data)
         
         assert response.status_code in [200, 201, 202]
 
@@ -83,7 +83,7 @@ class TestTaskEndpoints:
             "priority": 15,  # Invalid: must be 1-10
         }
         
-        response = await async_client.post("/tasks", json=task_data)
+        response = await async_client.post("/api/tasks", json=task_data)
         
         assert response.status_code == 422  # Validation error
 
@@ -91,14 +91,14 @@ class TestTaskEndpoints:
     async def test_get_task(self, async_client: AsyncClient):
         """Test retrieving a task by ID."""
         # First create a task
-        create_response = await async_client.post("/tasks", json={
+        create_response = await async_client.post("/api/tasks", json={
             "name": "test_task",
             "payload": {"test": True},
         })
         task_id = create_response.json()["id"]
         
         # Then retrieve it
-        response = await async_client.get(f"/tasks/{task_id}")
+        response = await async_client.get(f"/api/tasks/{task_id}")
         
         assert response.status_code == 200
         data = response.json()
@@ -107,7 +107,7 @@ class TestTaskEndpoints:
     @pytest.mark.asyncio
     async def test_get_task_not_found(self, async_client: AsyncClient):
         """Test retrieving non-existent task."""
-        response = await async_client.get("/tasks/nonexistent-id")
+        response = await async_client.get("/api/tasks/nonexistent-id")
         
         assert response.status_code in [404, 422]
 
@@ -116,12 +116,12 @@ class TestTaskEndpoints:
         """Test listing tasks."""
         # Create some tasks
         for i in range(3):
-            await async_client.post("/tasks", json={
+            await async_client.post("/api/tasks", json={
                 "name": f"task_{i}",
                 "payload": {"index": i},
             })
         
-        response = await async_client.get("/tasks")
+        response = await async_client.get("/api/tasks")
         
         assert response.status_code == 200
 
@@ -133,13 +133,13 @@ class TestQueueEndpoints:
     async def test_list_queues(self, async_client: AsyncClient):
         """Test listing all queues."""
         # Create task to ensure queue exists
-        await async_client.post("/tasks", json={
+        await async_client.post("/api/tasks", json={
             "name": "task1",
             "payload": {},
             "queue": "test_queue",
         })
         
-        response = await async_client.get("/queues")
+        response = await async_client.get("/api/queues")
         
         assert response.status_code == 200
         data = response.json()
@@ -149,13 +149,13 @@ class TestQueueEndpoints:
     async def test_get_queue_stats(self, async_client: AsyncClient):
         """Test getting queue statistics."""
         # Create some tasks
-        await async_client.post("/tasks", json={
+        await async_client.post("/api/tasks", json={
             "name": "test_task",
             "payload": {},
             "queue": "stats_queue",
         })
         
-        response = await async_client.get("/queues/stats_queue/stats")
+        response = await async_client.get("/api/queues/stats_queue/stats")
         
         assert response.status_code == 200
         data = response.json()
@@ -168,7 +168,7 @@ class TestWorkerEndpoints:
     @pytest.mark.asyncio
     async def test_list_workers(self, async_client: AsyncClient):
         """Test listing all workers."""
-        response = await async_client.get("/workers")
+        response = await async_client.get("/api/workers")
         
         assert response.status_code == 200
         data = response.json()
@@ -182,7 +182,7 @@ class TestErrorHandling:
     async def test_invalid_json(self, async_client: AsyncClient):
         """Test handling of invalid JSON."""
         response = await async_client.post(
-            "/tasks",
+            "/api/tasks",
             content="invalid json",
             headers={"Content-Type": "application/json"},
         )
@@ -192,7 +192,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_missing_required_field(self, async_client: AsyncClient):
         """Test handling of missing required field."""
-        response = await async_client.post("/tasks", json={
+        response = await async_client.post("/api/tasks", json={
             "payload": {},
             # Missing 'name' field
         })
